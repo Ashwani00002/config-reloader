@@ -3,7 +3,6 @@
     "APP_URL": "https://api.delhivery.com/v2",
     "DATABASE_HOST" : "db.delhivery.com",
     "DATABASE_PORT" : "5432",
-    "LOG_LEVEL": "ERROR",
     "FEATURE_FLAG_NEW_UI": "True",
     "JWT_SECRET" : "supersecretkey123",
     "API_KEY": "sensitiveApiKey7836"
