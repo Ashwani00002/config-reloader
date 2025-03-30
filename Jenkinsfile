@@ -1,14 +1,25 @@
-@Library('jenkins-shared-libs') _
+@Library("jenkins-shared-libs") _
 
 pipeline {
     agent any
+    
     stages {
-        stage('Test') {
+        stage('Initialize Configuration') {
             steps {
-                script {
-                    def branchInfo = parseBranchName('dev.test.app')
-                    println branchInfo
-                }
+                checkout scm
+                parseBranchConfig(env.GIT_BRANCH)
+            }
+        }
+        
+        stage('Consul Configuration') {
+            environment {
+                CONSUL_HTTP_ADDR = 'http://34.238.184.38:8500/v1/kv'
+            }
+            steps {
+                consulConfigManager(
+                    consulVersion: '1.10.0',
+                    consulAddr: env.CONSUL_HTTP_ADDR
+                )
             }
         }
     }
