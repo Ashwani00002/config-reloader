@@ -1,8 +1,8 @@
 {
     "PORT": "9090",
     "APP_URL": "https://api.delhivery.com/v2",
-    "DATABASE_HOST": "db.delhivery.com",
-    "API_KEY_TEST": "e8dh71f@3WqQc!2z&9XyT*nB6",
+    "DATABASE_HOST_NAME": "db.delhivery.com",
+    "API_KEY_TEST_2": "e8dh71f@3WqQc!2z&9XyT*nB6",
     "LOG_LEVEL": "ERROR",
-    "FEATURE_FLAG_NEW_UI": "False"
+    "FEATURE_FLAG_NEW_UI": "True"
 }
