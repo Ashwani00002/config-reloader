@@ -4,7 +4,7 @@ pipeline {
     agent any
 
     environment {
-        CONSUL_HTTP_ADDR = 'http://34.238.184.38:8500/v1/kv'
+        CONSUL_HTTP_ADDR = 'http://34.235.116.78:8500/v1/kv'
     }
 
     stages {
