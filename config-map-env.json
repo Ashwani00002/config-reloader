@@ -1,9 +1,9 @@
 {
-    "PORT": "9090",
-    "APP_URL": "https://api.delhivery.com/v2",
-    "DATABASE_HOST" : "db.delhivery.com",
-    "DATABASE_PORT" : "5432",
-    "FEATURE_FLAG_NEW_UI": "True",
-    "JWT_SECRET" : "supersecretkey123",
-    "API_KEY": "sensitiveApiKey7836"
+    "PORT": "9876",  
+    "APP_URL": "https://api.productiondomain.com/v2", 
+    "DATABASE_HOST": "prod.db.delhivery.com",  
+    "DATABASE_PORT": "5432",  
+    "FEATURE_FLAG_NEW_UI": "False",  
+    "JWT_SECRET": "ProductionSuperSecretKey", 
+    "API_KEY": "ProductionApiKey"  
 }
