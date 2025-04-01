@@ -1,5 +1,4 @@
 {
-    "PORT": "9876",  
     "APP_URL": "https://api.productiondomain.com/v2", 
     "DATABASE_HOST": "prod.db.delhivery.com",  
     "DATABASE_PORT": "5432",  
