@@ -5,6 +5,5 @@
     "DATABASE_PORT" : "5432",
     "FEATURE_FLAG_NEW_UI": "True",
     "JWT_SECRET" : "supersecretkey123",
-    "API_KEY": "sensitiveApiKey7836", 
-    "NEW_KEY" :"NEW_VALUE"
+    "API_KEY": "sensitiveApiKey7836"
 }
