@@ -70,7 +70,7 @@ pipeline {
             }
         }
 
-        stage('Upload DEX Configuration to Consul') {
+        stage('Synchronize DEX Configuration with Consul') {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'CONSUL_HTTP_TOKEN', variable: 'CONSUL_HTTP_TOKEN')]) {
@@ -83,38 +83,131 @@ pipeline {
                             "X-Consul-Token: ${consulToken}"
                         ]
 
-                        def uploadConfig = { connectorType, config ->
+                        def fetchConsulKeys = { String prefix ->
+                            def consulKeys = []
+                            def queryUrl = "${consulHttpAddr}/${prefix}?recurse=true&token=${consulToken}"
+                            try {
+                                def response = sh(script: "curl -s ${queryUrl}", returnStdout: true).trim()
+                                def jsonResponse = readJSON text: response
+                                jsonResponse?.each { item ->
+                                    consulKeys << item.Key
+                                }
+                            } catch (Exception e) {
+                                echo "Error fetching Consul keys for prefix '${prefix}': ${e.getMessage()}"
+                            }
+                            return consulKeys
+                        }
+
+                        def putValueToConsul = { String keyPath, String value, List createdOrModified ->
+                            def putUrl = "${consulHttpAddr}/${keyPath}"
+                            try {
+                                sh """
+                                    curl -X PUT -H "${headers.join('" -H "')}" -d '${value}' "${putUrl}"
+                                """
+                                createdOrModified << keyPath
+                            } catch (Exception e) {
+                                error "Failed to put key '${keyPath}' with value '${value}' to Consul: ${e.getMessage()}"
+                            }
+                        }
+
+                        def deleteKeyFromConsul = { String keyPath, List deleted ->
+                            def deleteUrl = "${consulHttpAddr}/${keyPath}"
+                            try {
+                                sh """
+                                    curl -X DELETE -H "X-Consul-Token: ${consulToken}" "${deleteUrl}"
+                                """
+                                echo "Deleted key: ${keyPath} from Consul."
+                                deleted << keyPath
+                            } catch (Exception e) {
+                                error "Failed to delete key '${keyPath}' from Consul: ${e.getMessage()}"
+                            }
+                        }
+
+                        def processConnector = { connectorType, config, createdOrModified, deleted ->
+                            def consulPrefix = "${consulBasePrefix}/${connectorType}"
+                            def currentConsulKeys = fetchConsulKeys(consulPrefix)
+                            def expectedConsulKeys = []
+
                             if (config) {
                                 def connectorName = config.keySet().first()
                                 def connectorData = config[connectorName]
                                 if (connectorName && connectorData) {
-                                    echo "Uploading ${connectorType} (${connectorName}) configuration..."
+                                    echo "Processing ${connectorType} (${connectorName})..."
                                     connectorData.each { key, value ->
-                                        def consulKey = "${consulBasePrefix}/${connectorType}/${connectorName}/${key}"
-                                        def putUrl = "${consulHttpAddr}/${consulKey}"
-                                        try {
-                                            sh """
-                                                curl -X PUT -H "${headers.join('" -H "')}" -d '${value}' "${putUrl}"
-                                            """
-                                        } catch (Exception e) {
-                                            error "Failed to put key '${consulKey}' with value '${value}' to Consul: ${e.getMessage()}"
-                                        }
+                                        def consulKey = "${consulPrefix}/${connectorName}/${key}"
+                                        putValueToConsul(consulKey, value, createdOrModified)
+                                        expectedConsulKeys << consulKey
                                     }
-                                } else {
-                                    echo "No valid configuration found for ${connectorType}."
                                 }
-                            } else {
-                                echo "${connectorType} configuration not found in dex-config.json."
+                            }
+
+                            currentConsulKeys.each { consulKey ->
+                                if (!expectedConsulKeys.contains(consulKey) && consulKey.startsWith("${consulPrefix}/")) {
+                                    deleteKeyFromConsul(consulKey, deleted)
+                                }
                             }
                         }
 
-                        uploadConfig("SOURCE_CONNECTOR", dexConfig?.SOURCE_CONNECTOR)
-                        uploadConfig("TASK_CONNECTOR", dexConfig?.TASK_CONNECTOR)
-                        uploadConfig("SINK_CONNECTOR", dexConfig?.SINK_CONNECTOR)
+                        def createdModifiedKeys = []
+                        def deletedKeys = []
+
+                        processConnector("SOURCE_CONNECTOR", dexConfig?.SOURCE_CONNECTOR, createdModifiedKeys, deletedKeys)
+                        processConnector("TASK_CONNECTOR", dexConfig?.TASK_CONNECTOR, createdModifiedKeys, deletedKeys)
+                        processConnector("SINK_CONNECTOR", dexConfig?.SINK_CONNECTOR, createdModifiedKeys, deletedKeys)
+
+                        // Store results in environment variables for the summary stage
+                        env.CREATED_KEYS = createdModifiedKeys.join('\n')
+                        env.DELETED_KEYS = deletedKeys.join('\n')
                     }
                 }
             }
         }
 
+        stage('Configuration Changes Summary') {
+            steps {
+                script {
+                    def changes = [created: [], deleted: []]
+
+                    try {
+                        changes.created = env.CREATED_KEYS?.split('\n') ?: []
+                        changes.deleted = env.DELETED_KEYS?.split('\n') ?: []
+                    } catch (Exception e) {
+                        error "Failed to get configuration changes: ${e.getMessage()}"
+                    }
+
+                    echo "--------------------------------------------------"
+                    echo "      DEX Configuration Changes Summary"
+                    echo "--------------------------------------------------"
+                    echo "Environment: ${env.DEX_ENV}"
+                    echo "BU: ${env.DEX_BU}"
+                    echo "Team: ${env.DEX_TEAM}"
+                    echo "Application: ${env.DEX_APP}"
+                    echo "--------------------------------------------------"
+
+                    def printChanges = { String type, List items ->
+                        if (items.size() > 0) {
+                            echo "\n${type} Configurations:"
+                            items.each { key ->
+                                // Extract just the connector name and property for cleaner output
+                                def displayKey = key.replaceFirst("${env.CONSUL_BASE_PREFIX}/", "")
+                                echo "  ${(type == 'Created/Modified') ? '🟢 +' : '🔴 -'} ${displayKey}"
+                            }
+                        } else {
+                            echo "\nNo configurations were ${type.toLowerCase()}."
+                        }
+                    }
+
+                    printChanges("Created/Modified", changes.created)
+                    printChanges("Deleted", changes.deleted)
+
+                    echo "\n--------------------------------------------------"
+                    echo "Total Changes:"
+                    echo "Created/Modified: ${changes.created.size()}"
+                    echo "Deleted: ${changes.deleted.size()}"
+                    echo "--------------------------------------------------"
+                }
+            }
+        }
     }
+
 }
