@@ -6,19 +6,19 @@
   "SOURCE_CONNECTOR": {
     "Kafka" : {
       "BROKER_URL": "<kafka-broker-url>",
-      "TOPIC": "<kafka-topic>",
+      "TOPIC": "<kafka_topic>",
       "CONSUMER_GROUP": "<kafka-consumer-group>" 
     }
   },
   "TASK_CONNECTOR": {  
     "HTTP": {
-      "ADAPTOR_URL": "<HTTP-URL>",
-      "ADAPTOR_HOST": "<HTTP-HOSTNAME>"
+      "ADAPTOR_URL": "<HTTP_URL>",
+      "ADAPTOR_HOST": "<HTTP_HOSTNAME>"
     }
   },
   "SINK_CONNECTOR": { 
     "DynamoDB": {
-      "URL": "<DynamoDB-URL>",
+      "URL": "<DynamoDB_URL>",
       "HOST": "<HTTP_DynamoDB_HOST>",
       "REGION": "ap-south-1"
     }
