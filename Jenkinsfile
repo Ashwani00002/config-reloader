@@ -52,6 +52,18 @@ pipeline {
                             chmod +x consul && rm -rf consul.zip
                             export PATH=$PWD:$PATH
                             consul --version
+                        '''
+
+                        // Install jq 
+                        sh '''
+                            echo "jq is not installed. Installing..."
+                            wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -P /tmp
+                            mv /tmp/jq-linux-amd64 /usr/local/bin/jq
+                            chmod +x /usr/local/bin/jq
+                        '''
+                        
+                        // Pretty-print Consul JSON output using jq
+                        sh '''
                             curl -s CONSUL_HTTP_ADDR/\\?recurse=true\\&token=${CONSUL_HTTP_TOKEN} | jq -r '.[] | [.Key,(.Value|@base64d)] | @csv'
                         '''
                     }
