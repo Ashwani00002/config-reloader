@@ -3,7 +3,7 @@
   "Team": "UMS",
   "Application": "LeadMgmt",
   "env": "PRD",
-  "SOURCE_CONNECTOR": {
+  "SINK_CONNECTOR": {
     "Kafka" : {
       "BROKER_URL": "<kafka-broker-url>",
       "TOPIC": "<kafka_topic>",
@@ -16,7 +16,7 @@
       "ADAPTOR_HOST": "<HTTP_HOSTNAME>"
     }
   },
-  "SINK_CONNECTOR": {
+  "SOURCE_CONNECTOR": { 
     "DynamoDB": {
       "URL": "<DynamoDB_URL>",
       "HOST": "<HTTP_DynamoDB_HOST>",
