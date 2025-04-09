@@ -1,26 +1,26 @@
 {
-    "BU": "BU_XYZ",
-    "Team": "UMS",
-    "Application": "LeadMgmt",
-    "env": "prd",
-    "SOURCE_CONNECTOR": {
-      "Kafka" : {
-        "BROKER_URL": "<kafka-broker-url>",
-        "TOPIC": "<kafka-topic>",
-        "CONSUMER_GROUP": "<kafka-consumer-group>" 
-      }
-    },
-    "TASK_CONNECTOR": {
-      "HTTP": {
-        "ADAPTOR_URL": "<HTTP-URL>",
-        "ADAPTOR_HOST": "<HTTP-HOSTNAME>"
-      }
-    },
-    "SINK_CONNECTOR": {
-      "DynamoDB": {
-        "URL": "<DynamoDB-URL>",
-        "HOST": "<HTTP_DynamoDB_HOST>",
-        "REGION": "ap-south-1"
-      }
+  "BU": "TRANSPORT",
+  "Team": "UMS",
+  "Application": "LeadMgmt",
+  "env": "PRD",
+  "SOURCE_CONNECTOR": {
+    "Kafka" : {
+      "BROKER_URL": "<kafka-broker-url>",
+      "TOPIC": "<kafka-topic>",
+      "CONSUMER_GROUP": "<kafka-consumer-group>" 
+    }
+  },
+  "TASK_CONNECTOR": {
+    "HTTP": {
+      "ADAPTOR_URL": "<HTTP-URL>",
+      "ADAPTOR_HOST": "<HTTP-HOSTNAME>"
+    }
+  },
+  "SINK_CONNECTOR": {
+    "DynamoDB": {
+      "URL": "<DynamoDB-URL>",
+      "HOST": "<HTTP_DynamoDB_HOST>",
+      "REGION": "ap-south-1"
     }
   }
+}
