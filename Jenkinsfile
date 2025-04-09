@@ -57,7 +57,6 @@ pipeline {
                         // Install jq 
                         sh '''
                             echo "jq is not installed. Installing..."
-                            ls -la
                             wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -P /tmp
                             mv /tmp/jq-linux-amd64 jq && chmod +x jq
                         '''
@@ -66,6 +65,52 @@ pipeline {
                         sh '''
                             curl -v $CONSUL_HTTP_ADDR/\\?recurse=true\\&token=${CONSUL_HTTP_TOKEN} | jq -r ".[] | [.Key,(.Value|@base64d)] | @csv"
                         '''
+                    }
+                }
+            }
+        }
+
+        stage('Upload DEX Configuration to Consul') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'CONSUL_HTTP_TOKEN', variable: 'CONSUL_HTTP_TOKEN')]) {
+                        def dexConfig = readJSON file: 'dex-config.json'
+                        def consulBasePrefix = env.CONSUL_BASE_PREFIX
+                        def consulHttpAddr = env.CONSUL_HTTP_ADDR
+                        def consulToken = env.CONSUL_HTTP_TOKEN
+                        def headers = [
+                            'Content-Type: application/json',
+                            "X-Consul-Token: ${consulToken}"
+                        ]
+
+                        def uploadConfig = { connectorType, config ->
+                            if (config) {
+                                def connectorName = config.keySet().first()
+                                def connectorData = config[connectorName]
+                                if (connectorName && connectorData) {
+                                    echo "Uploading ${connectorType} (${connectorName}) configuration..."
+                                    connectorData.each { key, value ->
+                                        def consulKey = "${consulBasePrefix}/${connectorType}/${connectorName}/${key}"
+                                        def putUrl = "${consulHttpAddr}/${consulKey}"
+                                        try {
+                                            sh """
+                                                curl -X PUT -H "${headers.join('" -H "')}" -d '${value}' "${putUrl}"
+                                            """
+                                        } catch (Exception e) {
+                                            error "Failed to put key '${consulKey}' with value '${value}' to Consul: ${e.getMessage()}"
+                                        }
+                                    }
+                                } else {
+                                    echo "No valid configuration found for ${connectorType}."
+                                }
+                            } else {
+                                echo "${connectorType} configuration not found in dex-config.json."
+                            }
+                        }
+
+                        uploadConfig("SOURCE_CONNECTOR", dexConfig?.SOURCE_CONNECTOR)
+                        uploadConfig("TASK_CONNECTOR", dexConfig?.TASK_CONNECTOR)
+                        uploadConfig("SINK_CONNECTOR", dexConfig?.SINK_CONNECTOR)
                     }
                 }
             }
