@@ -50,41 +50,40 @@ pipeline {
                         chmod +x consul && rm -rf consul.zip
                         export PATH=$PWD:$PATH
                         consul --version
-                        🎃✅✅✅✅✅✅✅✅✅✅✅🎃
                         curl $CONSUL_HTTP_ADDR/\\?recurse=true
                     '''
                 }
             }
         }
 
-        // stage('Upload DEX Configuration to Consul') {
-        //     steps {
-        //         script {
-        //             def dexConfig = readJSON file: 'dex-config.json'
+        stage('Upload DEX Configuration to Consul') {
+            steps {
+                script {
+                    def dexConfig = readJSON file: 'dex-config.json'
 
-        //             def uploadConnectorConfig = { connectorType, config ->
-        //                 if (config) {
-        //                     def connectorName = config.keySet().first() // Get "Kafka", "HTTP", "DynamoDB"
-        //                     def connectorConfigData = config[connectorName] // Get the nested config
-        //                     if (connectorName && connectorConfigData) {
-        //                         echo "Uploading ${connectorType} (${connectorName}) configuration..."
-        //                         connectorConfigData.each { key, value ->
-        //                             def consulKey = "${env.CONSUL_BASE_PREFIX}/${connectorType}/${connectorName}/${key}"
-        //                             sh "consul kv put -http-addr=${env.CONSUL_ENDPOINT} ${consulKey} '${value}'"
-        //                         }
-        //                     } else {
-        //                         echo "No valid configuration found for ${connectorType}."
-        //                     }
-        //                 } else {
-        //                     echo "${connectorType} configuration not found in dex-config.json."
-        //                 }
-        //             }
+                    def uploadConnectorConfig = { connectorType, config ->
+                        if (config) {
+                            def connectorName = config.keySet().first() // Get "Kafka", "HTTP", "DynamoDB"
+                            def connectorConfigData = config[connectorName] // Get the nested config
+                            if (connectorName && connectorConfigData) {
+                                echo "Uploading ${connectorType} (${connectorName}) configuration..."
+                                connectorConfigData.each { key, value ->
+                                    def consulKey = "${env.CONSUL_BASE_PREFIX}/${connectorType}/${connectorName}/${key}"
+                                    sh "consul kv put -http-addr=${env.CONSUL_ENDPOINT} ${consulKey} '${value}'"
+                                }
+                            } else {
+                                echo "No valid configuration found for ${connectorType}."
+                            }
+                        } else {
+                            echo "${connectorType} configuration not found in dex-config.json."
+                        }
+                    }
 
-        //             uploadConnectorConfig("SOURCE_CONNECTOR", dexConfig?.SOURCE_CONNECTOR)
-        //             uploadConnectorConfig("TASK_CONNECTOR", dexConfig?.TASK_CONNECTOR)
-        //             uploadConnectorConfig("SINK_CONNECTOR", dexConfig?.SINK_CONNECTOR)
-        //         }
-        //     }
-        // }
+                    uploadConnectorConfig("SOURCE_CONNECTOR", dexConfig?.SOURCE_CONNECTOR)
+                    uploadConnectorConfig("TASK_CONNECTOR", dexConfig?.TASK_CONNECTOR)
+                    uploadConnectorConfig("SINK_CONNECTOR", dexConfig?.SINK_CONNECTOR)
+                }
+            }
+        }
     }
 }
