@@ -80,6 +80,9 @@ pipeline {
                             modified: [],
                             deleted: []
                         ]
+                        def consulBasePrefix = env.CONSUL_BASE_PREFIX
+                        def consulHttpAddr = env.CONSUL_HTTP_ADDR
+                        def consulToken = env.CONSUL_HTTP_TOKEN
 
                         // Function to normalize values for accurate comparison
                         def normalizeValue = { value ->
@@ -90,63 +93,62 @@ pipeline {
                             return readJSON(text: writeJSON(json: value)).toString().trim()
                         }
 
+                        // Fetch all Consul keys under the base prefix
+                        def allConsulKeys = []
+                        def allConsulValues = [:]
+                        def allConsulResponse = sh(script: """
+                            curl -s -H "X-Consul-Token: ${consulToken}" \
+                            "${consulHttpAddr}/${consulBasePrefix}?recurse=true"
+                        """, returnStdout: true).trim()
+
+                        if (allConsulResponse && allConsulResponse != "null") {
+                            readJSON(text: allConsulResponse).each { item ->
+                                def key = item.Key
+                                allConsulKeys << key
+                                def valueResponse = sh(script: """
+                                    curl -s -H "X-Consul-Token: ${consulToken}" \
+                                    "${consulHttpAddr}/${key}?raw=true"
+                                """, returnStdout: true).trim()
+                                allConsulValues[key] = normalizeValue(valueResponse)
+                            }
+                        }
+
+                        def expectedConsulKeysThisRun = []
+
                         ['SOURCE_CONNECTOR', 'TASK_CONNECTOR', 'SINK_CONNECTOR'].each { connectorType ->
                             def currentConfig = dexConfig[connectorType] ?: [:]
-                            def consulPrefix = "${env.CONSUL_BASE_PREFIX}/${connectorType}"
-                            
-                            // Get current keys and values from Consul
-                            def consulKeys = []
-                            def consulValues = [:]
-                            def consulResponse = sh(script: """
-                                curl -s -H "X-Consul-Token: ${env.CONSUL_HTTP_TOKEN}" \
-                                "${env.CONSUL_HTTP_ADDR}/${connectorType}?recurse=true"
-                            """, returnStdout: true).trim()
-                            
-                            if (consulResponse && consulResponse != "null") {
-                                readJSON(text: consulResponse).each { item ->
-                                    def key = item.Key
-                                    consulKeys << key
-                                    // Get and normalize the existing value
-                                    def valueResponse = sh(script: """
-                                        curl -s -H "X-Consul-Token: ${env.CONSUL_HTTP_TOKEN}" \
-                                        "${env.CONSUL_HTTP_ADDR}/${key}?raw=true"
-                                    """, returnStdout: true).trim()
-                                    consulValues[key] = normalizeValue(valueResponse)
-                                }
-                            }
+                            def consulPrefix = "${consulBasePrefix}/${connectorType}"
 
-                            // Process each connector in the config
                             currentConfig.each { connectorName, connectorConfig ->
                                 connectorConfig.each { key, value ->
                                     def fullKey = "${consulPrefix}/${connectorName}/${key}"
                                     def normalizedNewValue = normalizeValue(value)
-                                    
-                                    if (consulKeys.contains(fullKey)) {
-                                        // Key exists - check if value changed
-                                        if (normalizedNewValue != consulValues[fullKey]) {
+
+                                    if (allConsulKeys.contains(fullKey)) {
+                                        if (normalizedNewValue != allConsulValues[fullKey]) {
                                             changes.modified << fullKey
                                         }
-                                        // Remove from consulKeys (remaining will be deleted)
-                                        consulKeys.remove(fullKey)
                                     } else {
-                                        // New key - mark as created
                                         changes.created << fullKey
                                     }
-                                    
+
                                     // Create/update the key in Consul
                                     sh """
-                                        curl -X PUT -H "X-Consul-Token: ${env.CONSUL_HTTP_TOKEN}" \
-                                        -d '${normalizedNewValue}' "${env.CONSUL_HTTP_ADDR}/${fullKey}"
+                                        curl -X PUT -H "X-Consul-Token: ${consulToken}" \
+                                        -d '${normalizedNewValue}' "${consulHttpAddr}/${fullKey}"
                                     """
+                                    expectedConsulKeysThisRun << fullKey
                                 }
                             }
-                            
-                            // Any remaining consulKeys should be deleted
-                            consulKeys.each { keyToDelete ->
-                                changes.deleted << keyToDelete
+                        }
+
+                        // Identify and delete stale keys
+                        allConsulKeys.each { consulKey ->
+                            if (consulKey.startsWith("${consulBasePrefix}/") && !expectedConsulKeysThisRun.contains(consulKey)) {
+                                changes.deleted << consulKey
                                 sh """
-                                    curl -X DELETE -H "X-Consul-Token: ${env.CONSUL_HTTP_TOKEN}" \
-                                    "${env.CONSUL_HTTP_ADDR}/${keyToDelete}"
+                                    curl -X DELETE -H "X-Consul-Token: ${consulToken}" \
+                                    "${consulHttpAddr}/${consulKey}"
                                 """
                             }
                         }
