@@ -5,7 +5,7 @@
   "env": "PRD",
   "SOURCE_CONNECTOR": {
     "Kafka" : {
-      "BROKER_URL": "<kafka_broker_url>",
+      "BROKER_URL": "<kafka-broker-url>",
       "TOPIC": "<kafka_topic>",
       "CONSUMER_GROUP": "<kafka_consumer_group>" 
     }
@@ -20,7 +20,7 @@
     "DynamoDB": {
       "URL": "<DynamoDB_URL>",
       "HOST": "<HTTP_DynamoDB_HOST>",
-      "REGION": "ap_south_1"
+      "REGION": "ap-south-1"
     }
   }
 }

@@ -16,10 +16,10 @@ pipeline {
                     try {
                         dexConfig = readJSON file: 'dex-config.json'
                         if (!dexConfig) {
-                            error "dex-config.json is empty or invalid."
+                            error "⚠️ dex-config.json is empty or invalid."
                         }
                     } catch (Exception e) {
-                        error "Error reading dex-config.json: ${e.getMessage()}"
+                        error "🚨 Error reading dex-config.json: ${e.getMessage()}"
                     }
 
                     env.DEX_BU = dexConfig?.BU
@@ -28,7 +28,7 @@ pipeline {
                     env.DEX_ENV = dexConfig?.env
 
                     if (!env.DEX_BU || !env.DEX_TEAM || !env.DEX_APP || !env.DEX_ENV) {
-                        error "Missing top-level DEX identifiers (BU, Team, Application, env) in dex-config.json"
+                        error "🛑 Missing top-level DEX identifiers (BU, Team, Application, env) in dex-config.json"
                     }
 
                     env.CONSUL_BASE_PREFIX = "${env.DEX_ENV}_${env.DEX_BU}/${env.DEX_TEAM}/${env.DEX_APP}"
@@ -56,7 +56,7 @@ pipeline {
 
                         // Install jq 
                         sh '''
-                            echo "jq is not installed. Installing..."
+                            echo "⬇️ Installing jq..."
                             wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -P /tmp
                             mv /tmp/jq-linux-amd64 jq && chmod +x jq
                         '''
@@ -70,7 +70,7 @@ pipeline {
             }
         }
 
-        stage('Synchronize Configuration') {
+        stage('Synchronize Configuration 🔄') {
                     steps {
                         script {
                             withCredentials([string(credentialsId: 'CONSUL_HTTP_TOKEN', variable: 'CONSUL_HTTP_TOKEN')]) {
@@ -162,7 +162,7 @@ pipeline {
                     }
         }
 
-        stage('Configuration Changes Summary') {
+        stage('Configuration Changes Summary 📊') {
             steps {
                 script {
                     def changes = [
@@ -215,7 +215,7 @@ pipeline {
     post {
         always {
             sh 'rm -f consul jq || true'
-            echo "Pipeline completed"
+            echo "🧹 Pipeline completed"
         }
         success {
             echo "✅ Configuration synchronization successful"
