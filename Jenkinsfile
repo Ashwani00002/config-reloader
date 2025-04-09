@@ -71,95 +71,95 @@ pipeline {
         }
 
         stage('Synchronize Configuration') {
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'CONSUL_HTTP_TOKEN', variable: 'CONSUL_HTTP_TOKEN')]) {
-                        def dexConfig = readJSON file: 'dex-config.json'
-                        def changes = [
-                            created: [],
-                            modified: [],
-                            deleted: []
-                        ]
-                        def consulBasePrefix = env.CONSUL_BASE_PREFIX
-                        def consulHttpAddr = env.CONSUL_HTTP_ADDR
-                        def consulToken = env.CONSUL_HTTP_TOKEN
+                    steps {
+                        script {
+                            withCredentials([string(credentialsId: 'CONSUL_HTTP_TOKEN', variable: 'CONSUL_HTTP_TOKEN')]) {
+                                def dexConfig = readJSON file: 'dex-config.json'
+                                def changes = [
+                                    created: [],
+                                    modified: [],
+                                    deleted: []
+                                ]
+                                def consulBasePrefix = env.CONSUL_BASE_PREFIX
+                                def consulHttpAddr = env.CONSUL_HTTP_ADDR
+                                def consulToken = env.CONSUL_HTTP_TOKEN
 
-                        // Function to normalize values for accurate comparison
-                        def normalizeValue = { value ->
-                            if (value == null) return ""
-                            if (value instanceof String) {
-                                return value.trim().replaceAll("\\s+", " ")
-                            }
-                            return readJSON(text: writeJSON(json: value)).toString().trim()
-                        }
-
-                        // Fetch all Consul keys under the base prefix
-                        def allConsulKeys = []
-                        def allConsulValues = [:]
-                        def allConsulResponse = sh(script: """
-                            curl -s -H "X-Consul-Token: ${consulToken}" \
-                            "${consulHttpAddr}/${consulBasePrefix}?recurse=true"
-                        """, returnStdout: true).trim()
-
-                        if (allConsulResponse && allConsulResponse != "null") {
-                            readJSON(text: allConsulResponse).each { item ->
-                                def key = item.Key
-                                allConsulKeys << key
-                                def valueResponse = sh(script: """
-                                    curl -s -H "X-Consul-Token: ${consulToken}" \
-                                    "${consulHttpAddr}/${key}?raw=true"
-                                """, returnStdout: true).trim()
-                                allConsulValues[key] = normalizeValue(valueResponse)
-                            }
-                        }
-
-                        def expectedConsulKeysThisRun = []
-
-                        ['SOURCE_CONNECTOR', 'TASK_CONNECTOR', 'SINK_CONNECTOR'].each { connectorType ->
-                            def currentConfig = dexConfig[connectorType] ?: [:]
-                            def consulPrefix = "${consulBasePrefix}/${connectorType}"
-
-                            currentConfig.each { connectorName, connectorConfig ->
-                                connectorConfig.each { key, value ->
-                                    def fullKey = "${consulPrefix}/${connectorName}/${key}"
-                                    def normalizedNewValue = normalizeValue(value)
-
-                                    if (allConsulKeys.contains(fullKey)) {
-                                        if (normalizedNewValue != allConsulValues[fullKey]) {
-                                            changes.modified << fullKey
-                                        }
-                                    } else {
-                                        changes.created << fullKey
+                                // Function to normalize values for accurate comparison
+                                def normalizeValue = { value ->
+                                    if (value == null) return ""
+                                    if (value instanceof String) {
+                                        return value.trim().replaceAll("\\s+", " ")
                                     }
-
-                                    // Create/update the key in Consul
-                                    sh """
-                                        curl -X PUT -H "X-Consul-Token: ${consulToken}" \
-                                        -d '${normalizedNewValue}' "${consulHttpAddr}/${fullKey}"
-                                    """
-                                    expectedConsulKeysThisRun << fullKey
+                                    try {
+                                        def parsed = readJSON(text: writeJSON(json: value))
+                                        return writeJSON(json: parsed).trim()
+                                    } catch (Exception e) {
+                                        return value.trim().replaceAll("\\s+", " ")
+                                    }
                                 }
+
+                                // Fetch current Consul configuration
+                                def currentConsulConfig = [:]
+                                def consulResponse = sh(script: """
+                                    curl -s -H "X-Consul-Token: ${consulToken}" \
+                                    "${consulHttpAddr}/${consulBasePrefix}?recurse=true"
+                                """, returnStdout: true).trim()
+
+                                if (consulResponse && consulResponse != "null") {
+                                    readJSON(text: consulResponse).each { item ->
+                                        currentConsulConfig[item.Key] = normalizeValue(sh(script: """
+                                            curl -s -H "X-Consul-Token: ${consulToken}" \
+                                            "${consulHttpAddr}/${item.Key}?raw=true"
+                                        """, returnStdout: true).trim())
+                                    }
+                                }
+
+                                def expectedConsulConfig = [:]
+
+                                ['SOURCE_CONNECTOR', 'TASK_CONNECTOR', 'SINK_CONNECTOR'].each { connectorType ->
+                                    def configSection = dexConfig[connectorType] ?: [:]
+                                    def consulPrefix = "${consulBasePrefix}/${connectorType}"
+
+                                    configSection.each { connectorName, connectorDetails ->
+                                        connectorDetails.each { key, value ->
+                                            def fullKey = "${consulPrefix}/${connectorName}/${key}"
+                                            expectedConsulConfig[fullKey] = normalizeValue(value)
+                                        }
+                                    }
+                                }
+
+                                // Identify and process creations and modifications
+                                expectedConsulConfig.each { key, newValue ->
+                                    if (!currentConsulConfig.containsKey(key)) {
+                                        changes.created << key
+                                        sh """
+                                            curl -X PUT -H "X-Consul-Token: ${consulToken}" -d '${newValue}' "${consulHttpAddr}/${key}"
+                                        """
+                                    } else if (currentConsulConfig[key] != newValue) {
+                                        changes.modified << key
+                                        sh """
+                                            curl -X PUT -H "X-Consul-Token: ${consulToken}" -d '${newValue}' "${consulHttpAddr}/${key}"
+                                        """
+                                    }
+                                }
+
+                                // Identify and process deletions
+                                currentConsulConfig.each { key, oldValue ->
+                                    if (!expectedConsulConfig.containsKey(key) && key.startsWith("${consulBasePrefix}/")) {
+                                        changes.deleted << key
+                                        sh """
+                                            curl -X DELETE -H "X-Consul-Token: ${consulToken}" "${consulHttpAddr}/${key}"
+                                        """
+                                    }
+                                }
+
+                                // Store changes for summary stage
+                                env.CHANGES_CREATED = changes.created.join('\n')
+                                env.CHANGES_MODIFIED = changes.modified.join('\n')
+                                env.CHANGES_DELETED = changes.deleted.join('\n')
                             }
                         }
-
-                        // Identify and delete stale keys
-                        allConsulKeys.each { consulKey ->
-                            if (consulKey.startsWith("${consulBasePrefix}/") && !expectedConsulKeysThisRun.contains(consulKey)) {
-                                changes.deleted << consulKey
-                                sh """
-                                    curl -X DELETE -H "X-Consul-Token: ${consulToken}" \
-                                    "${consulHttpAddr}/${consulKey}"
-                                """
-                            }
-                        }
-
-                        // Store changes for summary stage
-                        env.CHANGES_CREATED = changes.created.join('\n')
-                        env.CHANGES_MODIFIED = changes.modified.join('\n')
-                        env.CHANGES_DELETED = changes.deleted.join('\n')
                     }
-                }
-            }
         }
 
         stage('Configuration Changes Summary') {
