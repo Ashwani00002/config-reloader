@@ -3,11 +3,11 @@
   "Team": "UMS",
   "Application": "LeadMgmt",
   "env": "PRD",
-  "SINK_CONNECTOR": {
+  "SOURCE_CONNECTOR": {
     "Kafka" : {
-      "BROKER_URL": "<kafka-broker-url>",
+      "BROKER_URL": "<kafka_broker_url>",
       "TOPIC": "<kafka_topic>",
-      "CONSUMER_GROUP": "<kafka-consumer-group>" 
+      "CONSUMER_GROUP": "<kafka_consumer_group>" 
     }
   },
   "TASK_CONNECTOR": {  
@@ -16,11 +16,11 @@
       "ADAPTOR_HOST": "<HTTP_HOSTNAME>"
     }
   },
-  "SOURCE_CONNECTOR": { 
+  "SINK_CONNECTOR": {   
     "DynamoDB": {
       "URL": "<DynamoDB_URL>",
       "HOST": "<HTTP_DynamoDB_HOST>",
-      "REGION": "ap-south-1"
+      "REGION": "ap_south_1"
     }
   }
 }
