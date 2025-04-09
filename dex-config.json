@@ -10,13 +10,13 @@
       "CONSUMER_GROUP": "<kafka-consumer-group>" 
     }
   },
-  "TASK_CONNECTOR": {
+  "SINK_CONNECTOR": { 
     "HTTP": {
       "ADAPTOR_URL": "<HTTP-URL>",
       "ADAPTOR_HOST": "<HTTP-HOSTNAME>"
     }
   },
-  "SINK_CONNECTOR": {
+  "TASK_CONNECTOR": { 
     "DynamoDB": {
       "URL": "<DynamoDB-URL>",
       "HOST": "<HTTP_DynamoDB_HOST>",
