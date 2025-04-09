@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        CONSUL_HTTP_ADDR = 'http://34.238.184.38:8500/v1/kv' // Replace with your Consul endpoint
+        CONSUL_HTTP_ADDR = 'http://54.163.131.39:8500/v1/kv' // Replace with your Consul endpoint
     }
 
     stages {
