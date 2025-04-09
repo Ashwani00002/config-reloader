@@ -31,7 +31,7 @@ pipeline {
                     }
 
                     env.CONSUL_BASE_PREFIX = "${env.DEX_ENV}_${env.DEX_BU}/${env.DEX_TEAM}/${env.DEX_APP}"
-                    echo "Consul Base Prefix: 👉 ${env.CONSUL_BASE_PREFIX}"
+                    echo "Consul Base Prefix: 👉👉👉 ✅ ${env.CONSUL_BASE_PREFIX}"
                 }
             }
         }
@@ -50,6 +50,7 @@ pipeline {
                         chmod +x consul && rm -rf consul.zip
                         export PATH=$PWD:$PATH
                         consul --version
+                        🎃✅✅✅✅✅✅✅✅✅✅✅🎃
                         curl $CONSUL_HTTP_ADDR/\\?recurse=true
                     '''
                 }
