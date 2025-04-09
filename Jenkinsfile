@@ -37,7 +37,6 @@ pipeline {
             }
         }
 
-    stages {
         stage('Install Consul Agent') {
             steps {
                 script {
@@ -59,6 +58,6 @@ pipeline {
                 }
             }
         }
-    }
+
     }
 }
