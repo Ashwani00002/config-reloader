@@ -57,14 +57,14 @@ pipeline {
                         // Install jq 
                         sh '''
                             echo "jq is not installed. Installing..."
+                            ls -la
                             wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -P /tmp
-                            mv /tmp/jq-linux-amd64 /usr/local/bin/jq
-                            chmod +x /usr/local/bin/jq
+                            mv /tmp/jq-linux-amd64 jq && chmod +x jq
                         '''
                         
                         // Pretty-print Consul JSON output using jq
                         sh '''
-                            curl -s CONSUL_HTTP_ADDR/\\?recurse=true\\&token=${CONSUL_HTTP_TOKEN} | jq -r '.[] | [.Key,(.Value|@base64d)] | @csv'
+                            curl -v $CONSUL_HTTP_ADDR/\\?recurse=true\\&token=${CONSUL_HTTP_TOKEN} | jq -r ".[] | [.Key,(.Value|@base64d)] | @csv"
                         '''
                     }
                 }
