@@ -5,7 +5,7 @@
   "env": "PRD",
   "SOURCE_CONNECTOR": {
     "Kafka" : {
-      "BROKER_URL": "<kafka-broker-url>",
+      "BROKER_URL": "<kafka_broker_url>",
       "TOPIC": "<kafka_topic>",
       "CONSUMER_GROUP": "<kafka_consumer_group>" 
     }
