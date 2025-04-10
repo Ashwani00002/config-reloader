@@ -5,20 +5,20 @@
   "env": "PRD",
   "SOURCE_CONNECTOR": {
     "Kafka" : {
-      "BROKER_URL": "<kafka_broker_url>",
-      "TOPIC": "<kafka_topic>",
-      "CONSUMER_GROUP": "<kafka_consumer_group>" 
+      "BROKER_URL": "<kafka-broker-url>",
+      "TOPIC": "<kafka-topic>",
+      "CONSUMER_GROUP": "<kafka-consumer-group>" 
     }
   },
   "TASK_CONNECTOR": {  
     "HTTP": {
-      "ADAPTOR_URL": "<HTTP_URL>",
-      "ADAPTOR_HOST": "<HTTP_HOSTNAME>"
+      "ADAPTOR_URL": "<HTTP-URL>",
+      "ADAPTOR_HOST": "<HTTP-HOSTNAME>"
     }
   },
   "SINK_CONNECTOR": {   
     "DynamoDB": {
-      "URL": "<DynamoDB_URL>",
+      "URL": "<DynamoDB-URL>",
       "HOST": "<HTTP_DynamoDB_HOST>",
       "REGION": "ap-south-1"
     }
