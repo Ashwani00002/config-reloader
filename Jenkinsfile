@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        CONSUL_HTTP_ADDR = 'https://consul-ui-dev.pntrzz.com/v1/kv' // Replace with your Consul endpoint
+        CONSUL_HTTP_ADDR = 'https://consul-ui-dev.pntrzz.com/v1/kv' 
 
     }
 
@@ -61,7 +61,7 @@ pipeline {
                             mv /tmp/jq-linux-amd64 jq && chmod +x jq
                         '''
                         
-                        // Pretty-print Consul JSON output using jq
+                        // Pretty-print existing Consul KV JSON output using jq
                         sh '''
                             curl -v $CONSUL_HTTP_ADDR/\\?recurse=true\\&token=${CONSUL_HTTP_TOKEN} | jq -r ".[] | [.Key,(.Value|@base64d)] | @csv"
                         '''
